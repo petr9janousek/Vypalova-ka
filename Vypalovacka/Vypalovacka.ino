@@ -2,9 +2,10 @@
 #include "Pinmap.h"
 #include <avr/wdt.h>
 #include "AccelStepper.h"
+#include "limits.h"
 
-#define DEBUG
-//#define RELEASE
+//#define DEBUG
+#define RELEASE
 
 void pinConfig();
 void wdtConfig();
@@ -12,7 +13,7 @@ void wdtConfig();
 AccelStepper motor(AccelStepper::DRIVER, PIN_MTR_STP, PIN_MTR_DIR);
 int state = 0;
 unsigned long timerStart = 0;
-unsigned long fireTime = 0;           //optimalizace typu
+unsigned long fireTime = 0;
 
 void setup()
 {
@@ -25,13 +26,14 @@ void setup()
   wdtConfig();
 
   motor.setPinsInverted(false, false, false); //dir, step, en
-  motor.setAcceleration(1000.0);
-  motor.setMaxSpeed(2500.0);
+  motor.setAcceleration(500.0);
+  motor.setMaxSpeed(1000.0);
 }
 
 void loop()
 {
-  fireTime = map(analogRead(PIN_POT), 0, 1023, 2000, 30000);
+  //cte potenciometr v rozsahu sekund 0-100
+  fireTime = map(analogRead(PIN_POT), 0, 1023, 1, 60) * 1000;
 
 #ifdef DEBUG
   Serial.print("Spinac pist: ");
@@ -42,10 +44,10 @@ void loop()
   Serial.println(analogRead(PIN_POT));
   Serial.print("Potenciometr: ");
   Serial.println(fireTime);
+#endif
   Serial.print("Case: ");
   Serial.println(state);
-#endif
-
+  
   switch (state)
   {
     case 0:
@@ -59,12 +61,13 @@ void loop()
       break;
     case 1:
       //pokud není sepnut spínač řetězu popojeď
-      motor.move(5500);
-      while (motor.currentPosition() < 1000)
-        motor.run();
-      while (digitalRead(PIN_ENS_CHAIN) == 0)
-        motor.run();
       motor.setCurrentPosition(0);
+      motor.moveTo(LONG_MAX);
+      while ((motor.currentPosition() < 3000) || (digitalRead(PIN_ENS_CHAIN) == 0))
+      {
+        wdt_reset();
+        motor.run();
+      }
       state++;
       break;
     case 2:
@@ -107,7 +110,7 @@ void pinConfig()
 
 void wdtConfig()
 {
-  wdt_enable(WDTO_8S);
+  wdt_enable(WDTO_4S);
 }
 
 /*
