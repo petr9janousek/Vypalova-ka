@@ -7,6 +7,8 @@
 //#define DEBUG
 #define RELEASE
 
+#define DISTANCE_FROM_SWITCH 1500
+
 void pinConfig();
 void wdtConfig();
 
@@ -63,7 +65,7 @@ void loop()
       //pokud není sepnut spínač řetězu popojeď
       motor.setCurrentPosition(0);
       motor.moveTo(LONG_MAX);
-      while ((motor.currentPosition() < 3000) || (digitalRead(PIN_ENS_CHAIN) == 0))
+      while ((motor.currentPosition() < DISTANCE_FROM_SWITCH) || (digitalRead(PIN_ENS_CHAIN) == 0))
       {
         wdt_reset();
         motor.run();
